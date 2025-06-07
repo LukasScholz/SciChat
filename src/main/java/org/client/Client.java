@@ -1,55 +1,88 @@
 package org.client;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 import java.io.*;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
 
 public class Client {
     
+    private final int KEYSIZE = 2048;
     private final String server;
-    private final int port;
-    private final BufferedReader reader;
-    private final PrintWriter writer;
-    private final Socket socket;
+    public final KeyPair KEYS;
+    private final int PORT;
+    private final BufferedReader READER;
+    private final PrintWriter WRITER;
+    private final Socket SOCKET;
+    private final BufferedReader CONSOLEREADER;
 
 
-    public Client(String[] args) throws IOException{
+    public Client(String[] args) throws IOException, NoSuchAlgorithmException {
         if (args.length < 2) throw new IllegalArgumentException();
 
         server = args[0];
-        port = Integer.parseInt(args[1]);
+        PORT = Integer.parseInt(args[1]);
 
-        socket = new Socket(server, port);
+        SOCKET = new Socket(server, PORT);
 
-        OutputStream output = socket.getOutputStream();
+        OutputStream output = SOCKET.getOutputStream();
 
-        writer = new PrintWriter(output, true);
+        WRITER = new PrintWriter(output, true);
 
-        InputStream input = socket.getInputStream();
-        reader = new BufferedReader(new InputStreamReader(input));
+        InputStream input = SOCKET.getInputStream();
+        READER = new BufferedReader(new InputStreamReader(input));
+
+        CONSOLEREADER = new BufferedReader(new InputStreamReader(System.in));
+        KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
+        generator.initialize(KEYSIZE);
+        KEYS = generator.generateKeyPair();
+    }
+
+    public String encrypt(String message) throws NoSuchPaddingException, NoSuchAlgorithmException,
+            IllegalBlockSizeException, BadPaddingException, InvalidKeyException {
+        Cipher encryptCipher = Cipher.getInstance("RSA");
+        encryptCipher.init(Cipher.ENCRYPT_MODE, KEYS.getPublic());
+        byte[] secretMessageBytes = message.getBytes(StandardCharsets.UTF_8);
+        byte[] encryptedMessageBytes = encryptCipher.doFinal(secretMessageBytes);
+        return Base64.getEncoder().encodeToString(encryptedMessageBytes);
+    }
+
+    public String decrypt(String message) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
+        byte[] encryptedMessageBytes = Base64.getDecoder().decode(message);
+        Cipher decryptCipher = Cipher.getInstance("RSA");
+        decryptCipher.init(Cipher.DECRYPT_MODE, KEYS.getPrivate());
+        byte[] decryptedMessageBytes = decryptCipher.doFinal(encryptedMessageBytes);
+        return new String(decryptedMessageBytes, StandardCharsets.UTF_8);
     }
 
     private static boolean isTermination(String message) {
         return message.equals("bye");
     }
+    private String read(String message) throws IOException {System.out.println(message); return CONSOLEREADER.readLine();}
     public static void main(String[] args) {
         try {
             Client client = new Client(args);
-
-            Console console = System.console();
-            String text;
             String message;
 
             do {
-                text = console.readLine("Enter text: ");
+                String text = client.read("Enter text: ");
 
-                client.writer.println(text);
-                message = client.reader.readLine();
+                client.WRITER.println(text);
+                message = client.READER.readLine();
 
                 System.out.println(message);
 
             } while (!isTermination(message));
             
-            client.socket.close();
+            client.SOCKET.close();
         }
         catch (Exception ex) {
             System.out.println("I/O error: " + ex.getMessage());
