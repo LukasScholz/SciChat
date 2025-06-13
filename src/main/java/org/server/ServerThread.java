@@ -1,15 +1,8 @@
 package org.server;
 
 
-import javax.crypto.BadPaddingException;
-import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
 import java.io.*;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
-import java.security.NoSuchAlgorithmException;
-import java.util.Base64;
 
 public class ServerThread extends Thread {
     private final Socket SOCKET;
@@ -32,8 +25,8 @@ public class ServerThread extends Thread {
                  if(isTermination(message)) break;
                  parseMessage(message);
             }
+            System.out.println(SOCKET.getLocalAddress().getHostName() + ": Client disconnected");
             SOCKET.close();
-            System.out.println("Client disconnected");
 
         } catch (Exception ex) {
             System.out.println("Server exception: " + ex.getMessage());
@@ -49,4 +42,5 @@ public class ServerThread extends Thread {
     private static boolean isTermination(String message) {
         return message.equals("bye");
     }
+
 }
