@@ -15,7 +15,7 @@ import java.util.Base64;
 
 public class Client {
     
-    private final int KEYSIZE = 2048;
+    private final int KEYSIZE = 4096;
     private final String server;
     public final KeyPair KEYS;
     private final int PORT;
@@ -70,6 +70,9 @@ public class Client {
     public static void main(String[] args) {
         try {
             Client client = new Client(args);
+            // send public Key to server
+            String b64key = Base64.getEncoder().encodeToString(client.KEYS.getPublic().getEncoded());
+            client.WRITER.println(b64key);
             String message;
 
             do {
@@ -78,7 +81,8 @@ public class Client {
                 client.WRITER.println(text);
                 message = client.READER.readLine();
 
-                System.out.println(message);
+                System.out.println((message));
+                System.out.println(client.decrypt(message));
 
             } while (!isTermination(message));
             
